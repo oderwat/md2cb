@@ -2,6 +2,10 @@
 
 A simple command line tool that converts markdown to rich text and copies it to the clipboard. Perfect for converting markdown tables to rich text that can be pasted into applications that support formatted text.
 
+## BEWARE
+
+> This is MAC OS only!
+
 ## Requirements
 
 - macOS (uses native Cocoa framework for clipboard operations)

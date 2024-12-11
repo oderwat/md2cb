@@ -16,8 +16,19 @@ jobs:
         with:
           go-version: '>=1.19.0'
 
+      - name: Install Xcode Command Line Tools
+        run: |
+          if ! xcode-select -p &> /dev/null; then
+            xcode-select --install
+          fi
+
+      - name: Install pandoc
+        run: brew install pandoc
+
       - name: Build
-        run: go build -v -o md2cb
+        run: |
+          export CGO_ENABLED=1
+          go build -v -o md2cb
 
       - name: Create Release
         id: create_release
@@ -29,6 +40,12 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+          body: |
+            macOS binary for md2cb
+
+            Requirements:
+            - macOS
+            - pandoc (`brew install pandoc`)
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -37,5 +54,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./md2cb
-          asset_name: md2cb
+          asset_name: md2cb-macos
           asset_content_type: application/octet-stream
