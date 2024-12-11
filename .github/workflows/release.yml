@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
@@ -16,43 +19,41 @@ jobs:
         with:
           go-version: '>=1.19.0'
 
-      - name: Install Xcode Command Line Tools
-        run: |
-          if ! xcode-select -p &> /dev/null; then
-            xcode-select --install
-          fi
-
       - name: Install pandoc
         run: brew install pandoc
 
-      - name: Build
+      - name: Build Intel
         run: |
           export CGO_ENABLED=1
-          go build -v -o md2cb
+          GOOS=darwin GOARCH=amd64 go build -o md2cb-darwin-amd64
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Build Apple Silicon
+        run: |
+          export CGO_ENABLED=1
+          GOOS=darwin GOARCH=arm64 go build -o md2cb-darwin-arm64
+
+      - name: Create Universal Binary
+        run: |
+          lipo -create -output md2cb-darwin-universal \
+            md2cb-darwin-amd64 \
+            md2cb-darwin-arm64
+
+      - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-          body: |
-            macOS binary for md2cb
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --title "Release ${{ github.ref_name }}" \
+            --notes "macOS binaries for md2cb
 
             Requirements:
             - macOS
-            - pandoc (`brew install pandoc`)
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./md2cb
-          asset_name: md2cb-macos
-          asset_content_type: application/octet-stream
+            - pandoc (\`brew install pandoc\`)
+          
+            Available versions:
+            - Universal Binary (works on both Intel and Apple Silicon)
+            - Intel Mac (x86_64) specific binary
+            - Apple Silicon (ARM64) specific binary" \
+            md2cb-darwin-universal#"md2cb-darwin-universal" \
+            md2cb-darwin-amd64#"md2cb-darwin-amd64" \
+            md2cb-darwin-arm64#"md2cb-darwin-arm64"
